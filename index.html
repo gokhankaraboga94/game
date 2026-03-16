@@ -60,6 +60,10 @@
         .e-unit { background: var(--e-color); box-shadow: 0 0 8px var(--e-color); }
         .archer-unit { background: #9b59b6; border: 1px solid #fff; z-index: 110; width: 22px; height: 22px; font-size: 12px; }
         .arrow { position: absolute; width: 10px; height: 2px; background: yellow; z-index: 40; border-radius: 2px; }
+
+        #blue-flag { position: absolute; font-size: 40px; z-index: 80; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; }
+        #countdown-txt { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); color: #ff416c; font-size: 80px; font-weight: bold; z-index: 4000; display: none; text-shadow: 0 0 20px black; }
+        #game-over-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: #ff416c; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; font-size: 50px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -83,13 +87,33 @@
 
 <div id="game-container">
     <div id="sidebar"><div id="cards-container"></div></div>
-    <div id="arena"><div id="wall"></div></div>
+    <div id="arena">
+        <div id="wall"></div>
+        <div id="blue-flag">🎌</div>
+        <div id="countdown-txt">10</div>
+    </div>
+</div>
+
+<div id="game-over-screen">
+    <div>KAYBETTİNİZ!</div>
+    <button onclick="location.reload()" style="margin-top:20px; padding: 10px 20px; font-size:20px; background:var(--gold); border:none; border-radius:5px; font-weight:bold; cursor:pointer;">Yeniden Başla</button>
 </div>
 
 <script>
-    let gold = 1200, wave = 1, wallHp = 2500, isRunning = false;
+    let gold = 1200, wave = 1, wallHp = 2500, isRunning = false, isGameOver = false;
     let players = [], enemies = [], arrows = [], archers = [];
     let selectedUnit = null, gameTime = 0, gameSpeed = 1, spawnTimer;
+
+    // Bayrak ve Geri Sayım Değişkenleri
+    let flagActive = false;
+    let flagTimerFrames = 0;
+    let flagCountdown = 10;
+    
+    // Bayrak Pozisyonunu Ayarla
+    let flagPos = { x: window.innerWidth * 0.15, y: window.innerHeight * 0.5 };
+    let flagEl = document.getElementById('blue-flag');
+    flagEl.style.left = flagPos.x + "px";
+    flagEl.style.top = flagPos.y + "px";
 
     function changeSpeed() {
         if(gameSpeed === 1) gameSpeed = 2;
@@ -100,7 +124,7 @@
 
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
-    setInterval(() => { if(isRunning) { gameTime++; updateTimer(); } }, 1000);
+    setInterval(() => { if(isRunning && !isGameOver) { gameTime++; updateTimer(); } }, 1000);
     function updateTimer() {
         let mins = Math.floor(gameTime/60).toString().padStart(2,'0');
         let secs = (gameTime%60).toString().padStart(2,'0');
@@ -130,11 +154,12 @@
         const arenaHeight = window.innerHeight - 60;
         for(let i=0; i<25; i++) {
             let y = (i + 1) * (arenaHeight / 26);
-            let a = { x: window.innerWidth * 0.45, y: y, lastShot: 0 };
             let div = document.createElement('div');
             div.className = 'unit archer-unit'; div.innerText = '🏹';
             div.style.left = "45%"; div.style.top = y + "px";
             document.getElementById('arena').appendChild(div);
+            // Element referansını da objeye kaydediyoruz
+            let a = { x: window.innerWidth * 0.45, y: y, lastShot: 0, el: div };
             archers.push(a);
         }
     }
@@ -145,7 +170,7 @@
         if(gold < cost * count) return;
         gold -= cost * count;
         for(let i=0; i<count; i++) {
-            // Başlangıç x pozisyonu surun gerisinde (0-35% arası)
+            // Askerler surun çok gerisinde doğar ve beklerler
             let p = { hp: hp, x: Math.random() * (window.innerWidth * 0.35), y: 60 + Math.random()*(window.innerHeight-120), speed: 2, el: null };
             p.el = createUnitEl(p, 'p-unit', '⚔️');
             players.push(p);
@@ -162,17 +187,26 @@
     }
 
     function toggleGame() { 
+        if(isGameOver) return;
         isRunning = !isRunning; 
         document.getElementById('play-btn').innerText = isRunning ? "DURDUR" : "DEVAM";
         if(isRunning) { loop(); spawnEnemy(); }
         else clearTimeout(spawnTimer);
     }
 
+    function triggerGameOver() {
+        isRunning = false;
+        isGameOver = true;
+        document.getElementById('game-over-screen').style.display = "flex";
+        document.getElementById('countdown-txt').style.display = "none";
+    }
+
     function spawnEnemy() {
-        if(!isRunning) return;
+        if(!isRunning || isGameOver) return;
         let count = 1 + Math.floor(wave / 4);
         for(let i=0; i<count; i++){
-            let e = { x: window.innerWidth + 50, y: Math.random()*window.innerHeight, speed: 1.2 + (wave*0.06), hp: 30 + (wave*30), el: null };
+            // Düşmanlar güçlendirildi (Daha yüksek can)
+            let e = { x: window.innerWidth + 50, y: 60 + Math.random()*(window.innerHeight-120), speed: 1.2 + (wave*0.06), hp: 60 + (wave*40), el: null };
             e.el = createUnitEl(e, 'e-unit', '💀');
             enemies.push(e);
         }
@@ -180,14 +214,19 @@
     }
 
     function loop() {
-        if(!isRunning) return;
+        if(!isRunning || isGameOver) return;
+
+        let enemyAtFlag = false;
 
         for(let s=0; s < gameSpeed; s++) {
-            // OKÇU MENZİLİ (Kısa Menzil: Sadece sura yaklaşanlara)
-            archers.forEach(a => {
-                let target = enemies.find(e => e.x > (window.innerWidth * 0.46) && e.x < (window.innerWidth * 0.65));
-                if(target && Date.now() - a.lastShot > 1100) { fireArrow(a, target); a.lastShot = Date.now(); }
-            });
+            
+            // Okçular sadece sur yıkılmamışsa çalışır
+            if(wallHp > 0) {
+                archers.forEach(a => {
+                    let target = enemies.find(e => e.x > (window.innerWidth * 0.46) && e.x < (window.innerWidth * 0.65));
+                    if(target && Date.now() - a.lastShot > 1100) { fireArrow(a, target); a.lastShot = Date.now(); }
+                });
+            }
 
             arrows.forEach((arr, idx) => {
                 arr.x += arr.vx; arr.y += arr.vy;
@@ -199,28 +238,69 @@
 
             enemies.forEach(e => {
                 if(wallHp > 0) {
-                    if(e.x > (window.innerWidth * 0.48)) e.x -= e.speed; else wallHp -= 0.9;
+                    if(e.x > (window.innerWidth * 0.48)) e.x -= e.speed; else wallHp -= 1.5; // Sur hasarı arttırıldı
                 } else {
                     let t = findNearest(e, players);
-                    if(t) moveTowards(e, t, false); else e.x -= e.speed;
+                    // Düşman oyuncuyu görürse ona saldırır (200px aggro menzili), yoksa bayrağa gider
+                    if(t && Math.hypot(e.x - t.x, e.y - t.y) < 200) { 
+                        moveTowards(e, t, false); 
+                    } else {
+                        let dx = flagPos.x - e.x, dy = flagPos.y - e.y;
+                        let dist = Math.hypot(dx, dy);
+                        if(dist > 25) {
+                            e.x += (dx/dist)*e.speed; e.y += (dy/dist)*e.speed;
+                        } else {
+                            enemyAtFlag = true;
+                        }
+                    }
                 }
             });
 
             players.forEach(p => {
-                // SUR YIKILANA KADAR ASKERLER SALDIRMAZ
-                if(wallHp > 0) {
-                    // Mevcut konumunda kal veya sura kadar yanaşıp bekle
-                    let targetX = window.innerWidth * 0.40;
-                    if(p.x < targetX - 20) p.x += p.speed * 0.3; 
-                } else {
-                    // Sur yıkıldıktan sonra saldırı moduna geç
+                if(wallHp <= 0) {
                     let t = findNearest(p, enemies);
                     if(t) moveTowards(p, t, true);
                 }
+                
+                // Oyuncuların Ekrandan Çıkmasını Engelle
+                let maxX = window.innerWidth - 30;
+                let maxY = window.innerHeight - 30;
+                p.x = Math.max(10, Math.min(p.x, maxX));
+                p.y = Math.max(70, Math.min(p.y, maxY));
             });
+
+            // Geri sayım mantığı (Oyun hızına duyarlı)
+            if(enemyAtFlag) {
+                if(!flagActive) {
+                    flagActive = true;
+                    flagCountdown = 10;
+                    flagTimerFrames = 0;
+                    document.getElementById('countdown-txt').style.display = "block";
+                    document.getElementById('countdown-txt').innerText = flagCountdown;
+                }
+                flagTimerFrames++;
+                if(flagTimerFrames >= 60) { // Saniyede ortalama 60 kare
+                    flagTimerFrames = 0;
+                    flagCountdown--;
+                    document.getElementById('countdown-txt').innerText = flagCountdown;
+                    if(flagCountdown <= 0) { triggerGameOver(); }
+                }
+            } else {
+                flagActive = false;
+                document.getElementById('countdown-txt').style.display = "none";
+            }
 
             enemies = enemies.filter(e => e.hp > 0 || (gold += (10+wave), e.el.remove(), false));
             players = players.filter(p => p.hp > 0 || (p.el.remove(), false));
+        }
+
+        // Sur yıkılma anı işlemleri
+        if(wallHp <= 0 && archers.length > 0) { 
+            document.getElementById('wall').style.opacity = "0.1"; 
+            wallHp = 0;
+            // Okçuları Yok Et
+            archers.forEach(a => { if(a.el) a.el.remove(); });
+            archers = []; 
         }
 
         // Görsel Güncelleme
@@ -228,17 +308,16 @@
         enemies.forEach(e => { e.el.style.left = e.x + "px"; e.el.style.top = e.y + "px"; });
         players.forEach(p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; });
 
-        if(wallHp <= 0) { document.getElementById('wall').style.opacity = "0.1"; wallHp = 0; }
         if(Math.random() < 0.001) { wave++; checkUnlocks(); }
         
         updateUI();
-        requestAnimationFrame(loop);
+        if(!isGameOver) requestAnimationFrame(loop);
     }
 
     function checkUnlocks() {
         for(let i=1; i<=50; i++) {
             let card = document.getElementById(`card-${i}`);
-            if(wave >= i) card.classList.remove('locked');
+            if(wave >= i && card) card.classList.remove('locked');
         }
     }
 
@@ -258,7 +337,7 @@
     function moveTowards(me, t, isP) {
         let dx = t.x - me.x, dy = t.y - me.y, dist = Math.hypot(dx, dy);
         if(dist > 25) { me.x += (dx/dist)*me.speed; me.y += (dy/dist)*me.speed; }
-        else t.hp -= isP ? 2 : 0.5;
+        else t.hp -= isP ? 2 : 1.5; // Düşmanlar daha fazla hasar vurur (eski değer 0.5)
     }
 
     function updateUI() {
