@@ -17,7 +17,7 @@
         .nav-btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
 
         #timer-box { 
-            position: absolute; top: 70px; right: 80px; /* Düşman kalesinin arkasında kalmaması için sola çektik */
+            position: absolute; top: 70px; right: 80px; 
             display: flex; flex-direction: column; align-items: flex-end; gap: 5px; z-index: 900; 
         }
         .speed-btn { 
@@ -28,10 +28,8 @@
         #game-container { display: flex; height: 100vh; padding-top: 60px; box-sizing: border-box; }
         #arena { flex: 1; position: relative; background: #141e30; overflow: hidden; background-image: radial-gradient(#243b55 1px, transparent 1px); background-size: 40px 40px; }
         
-        /* Bizim Surlar */
         #wall { position: absolute; left: 45%; top: 0; width: 35px; height: 100%; background: #34495e; border-left: 6px solid #2c3e50; border-right: 6px solid #2c3e50; z-index: 100; box-shadow: 0 0 25px black; transition: 0.5s; }
 
-        /* Düşman Üretim Kalesi (Zarar Görmez, HP'siz) */
         #enemy-castle { 
             position: absolute; right: 0; top: 0; width: 60px; height: 100%; 
             background: #1a0505; border-left: 5px solid var(--e-color); z-index: 90; 
@@ -85,7 +83,8 @@
 
 <div id="ui-layer">
     <div class="stat">💰 <span id="gold-val">1200</span></div>
-    <div class="stat">🏰 <span id="w-hp-txt">7500</span></div> <div>
+    <div class="stat">🏰 <span id="w-hp-txt">7500</span></div>
+    <div>
         <button id="play-btn" class="nav-btn" style="background:#2ecc71; color:white" onclick="toggleGame()">BAŞLAT</button>
         <button class="nav-btn" style="background:#e74c3c; color:white" onclick="location.reload()">SIFIRLA</button>
     </div>
@@ -120,7 +119,6 @@
 </div>
 
 <script>
-    // Sur HP 2500'den 7500'e yükseltildi
     let gold = 1200, wave = 1, wallHp = 7500, isRunning = false, isGameOver = false;
     let players = [], enemies = [], arrows = [], archers = [];
     let selectedUnit = null, gameTime = 0, gameSpeed = 1, spawnTimer;
@@ -195,7 +193,7 @@
             hp: 9999, 
             x: Math.random() * (window.innerWidth * 0.35), 
             y: 60 + Math.random()*(window.innerHeight-120), 
-            speed: 3, 
+            speed: 0, // Hız sıfırlandı
             damage: 50,
             el: null 
         };
@@ -224,7 +222,7 @@
         if(gold < cost * count) return;
         gold -= cost * count;
         for(let i=0; i<count; i++) {
-            let p = { hp: hp, x: Math.random() * (window.innerWidth * 0.35), y: 60 + Math.random()*(window.innerHeight-120), speed: 2, damage: 2, el: null };
+            let p = { hp: hp, x: Math.random() * (window.innerWidth * 0.35), y: 60 + Math.random()*(window.innerHeight-120), speed: 0, damage: 2, el: null }; // Hız sıfırlandı
             p.el = createUnitEl(p, 'p-unit', '⚔️');
             players.push(p);
         }
@@ -258,7 +256,6 @@
         if(!isRunning || isGameOver) return;
         let count = 1 + Math.floor(wave / 4);
         for(let i=0; i<count; i++){
-            // Düşmanlar artık ekran dışından değil, kaleden (ekranın sağından 70px içeriden) doğuyor
             let e = { x: window.innerWidth - 70, y: 60 + Math.random()*(window.innerHeight-120), speed: 1.2 + (wave*0.06), hp: 60 + (wave*40), el: null };
             e.el = createUnitEl(e, 'e-unit', '💀');
             enemies.push(e);
@@ -294,7 +291,7 @@
                 } else {
                     let t = findNearest(e, players);
                     if(t && Math.hypot(e.x - t.x, e.y - t.y) < 200) { 
-                        moveTowards(e, t, false); 
+                        moveTowards(e, t, false); // Sadece düşman hareket eder
                     } else {
                         let dx = flagPos.x - e.x, dy = flagPos.y - e.y;
                         let dist = Math.hypot(dx, dy);
@@ -310,15 +307,8 @@
             players.forEach(p => {
                 if(wallHp <= 0) {
                     let t = findNearest(p, enemies);
-                    if(t) moveTowards(p, t, true);
+                    if(t) moveTowards(p, t, true); // Oyuncu olduğu için hareket etmeyecek, sadece yakınsa hasar vuracak
                 }
-                
-                // Oyuncuların Ekrandan Çıkmasını Tamamen Engelleme
-                // Askerler artık düşman kalesinin içerisine veya ekran dışına giremez
-                let maxX = window.innerWidth - 80; 
-                let maxY = window.innerHeight - 30;
-                p.x = Math.max(10, Math.min(p.x, maxX));
-                p.y = Math.max(70, Math.min(p.y, maxY));
             });
 
             if(enemyAtFlag) {
@@ -382,13 +372,21 @@
         return n;
     }
 
-    function moveTowards(me, t, isP) {
+    // YENİ HAREKET VE SALDIRI MANTIĞI
+    function moveTowards(me, t, isPlayer) {
         let dx = t.x - me.x, dy = t.y - me.y, dist = Math.hypot(dx, dy);
-        if(dist > 25) { 
-            me.x += (dx/dist)*me.speed; 
-            me.y += (dy/dist)*me.speed; 
+        let attackRange = 35; // Askerler bu mesafeye giren düşmana kılıç sallar
+
+        if(dist > attackRange) { 
+            // Eğer hareket eden düşmansa ilerle
+            if (!isPlayer) {
+                me.x += (dx/dist)*me.speed; 
+                me.y += (dy/dist)*me.speed; 
+            }
+            // Oyuncuysa hiçbir şey yapma (hareket yasak)
         } else {
-            t.hp -= isP ? me.damage : 1.5; 
+            // Düşman veya oyuncu menzildeyse hasarını vur
+            t.hp -= isPlayer ? me.damage : 1.5; 
         }
     }
 
