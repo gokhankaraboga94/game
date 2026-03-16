@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sonsuz Kuşatma: Mobil Pro</title>
+    <title>Sonsuz Kuşatma: Mobil Pro V2</title>
     <style>
         :root { --p-color: #00d2ff; --e-color: #ff416c; --gold: #ffd700; }
         body { margin: 0; background: #0a0a12; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: manipulation; }
@@ -12,62 +12,62 @@
         #ui-layer { 
             position: absolute; top: 0; width: 100%; height: 60px;
             display: flex; justify-content: space-around; align-items: center; 
-            background: rgba(0,0,0,0.9); z-index: 1000; border-bottom: 1px solid #444; 
+            background: rgba(0,0,0,0.9); z-index: 2000; border-bottom: 1px solid #444; 
         }
         .stat { text-align: center; font-weight: bold; font-size: 14px; }
-        .nav-btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
+        .nav-btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
 
         #timer-box { position: absolute; top: 70px; right: 15px; font-size: 16px; color: var(--gold); z-index: 900; font-weight: bold; }
 
         /* ANA KONTEYNER */
-        #game-container { display: flex; height: 100vh; padding-top: 60px; box-sizing: border-box; position: relative; }
+        #game-container { display: flex; height: 100vh; padding-top: 60px; box-sizing: border-box; }
         
         /* SAVAŞ ALANI */
         #arena { flex: 1; position: relative; background: #141e30; overflow: hidden; background-image: radial-gradient(#243b55 1px, transparent 1px); background-size: 40px 40px; }
         #wall { position: absolute; left: 45%; top: 0; width: 35px; height: 100%; background: #34495e; border-left: 6px solid #2c3e50; border-right: 6px solid #2c3e50; z-index: 100; box-shadow: 0 0 20px black; transition: 0.5s; }
 
-        /* MOBİL UYUMLU MARKET (SİDEBAR) */
+        /* MARKET (SİDEBAR) */
         #sidebar { 
             width: 320px; background: #1a1a2e; padding: 15px; border-right: 2px solid #333; 
-            overflow-y: auto; box-sizing: border-box; z-index: 1100; transition: transform 0.3s ease;
+            overflow-y: auto; box-sizing: border-box; z-index: 1500; transition: transform 0.3s ease;
         }
 
-        /* MOBİL GÖRÜNÜM AYARLARI */
+        /* MARKET BUTONU (MOBİL İÇİN) */
+        #market-toggle {
+            position: fixed; bottom: 20px; left: 20px; z-index: 3000;
+            background: var(--gold); color: black; border: 2px solid white; border-radius: 50%;
+            width: 60px; height: 60px; font-size: 28px; cursor: pointer;
+            display: none; box-shadow: 0 0 20px rgba(255,215,0,0.5);
+            align-items: center; justify-content: center;
+        }
+
+        /* MOBİL AYARLAR */
         @media (max-width: 768px) {
             #sidebar {
-                position: fixed; bottom: 0; left: 0; width: 100%; height: 45vh;
-                border-right: none; border-top: 3px solid #444;
-                transform: translateY(100%); /* Başlangıçta gizli */
-                padding-top: 40px;
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 50vh;
+                border-right: none; border-top: 4px solid #444;
+                transform: translateY(100%);
             }
             #sidebar.open { transform: translateY(0); }
+            #market-toggle { display: flex; } /* Sadece mobilde göster */
             #wall { left: 40%; }
-            #market-toggle { display: block; }
         }
 
-        /* MARKET AÇ/KAPAT BUTONU (SADECE MOBİL) */
-        #market-toggle {
-            position: absolute; bottom: 20px; left: 20px; z-index: 1200;
-            background: var(--gold); color: black; border: none; border-radius: 50%;
-            width: 60px; height: 60px; font-size: 24px; cursor: pointer; box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            display: none;
-        }
-
-        /* KARTLAR VE SATIN ALMA */
+        /* KARTLAR */
         .card { background: #16213e; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 2px solid transparent; transition: 0.3s; cursor: pointer; }
-        .card.locked { opacity: 0.3; cursor: not-allowed; grayscale: 1; }
+        .card.locked { opacity: 0.3; cursor: not-allowed; }
         .card.selected { border-color: var(--p-color); background: #1f4068; }
         
         .buy-group { display: none; margin-top: 10px; gap: 8px; }
         .card.selected .buy-group { display: flex; }
-        .buy-group button { background: var(--gold); border: none; padding: 8px; border-radius: 5px; flex: 1; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .buy-group button { background: var(--gold); border: none; padding: 10px; border-radius: 5px; flex: 1; font-weight: bold; cursor: pointer; font-size: 14px; }
 
         /* BİRİMLER */
         .unit { position: absolute; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 50; }
         .p-unit { background: var(--p-color); box-shadow: 0 0 8px var(--p-color); }
         .e-unit { background: var(--e-color); box-shadow: 0 0 8px var(--e-color); }
         .archer-unit { background: #9b59b6; border: 1px solid #fff; z-index: 110; width: 22px; height: 22px; font-size: 12px; }
-        .arrow { position: absolute; width: 10px; height: 2px; background: yellow; z-index: 40; border-radius: 2px; }
+        .arrow { position: absolute; width: 12px; height: 3px; background: yellow; z-index: 40; border-radius: 2px; }
         .lock-info { font-size: 10px; color: #ff416c; font-weight: bold; display: block; margin-top: 4px; }
     </style>
 </head>
@@ -78,14 +78,15 @@
     <div class="stat">🏰 <span id="w-hp-txt">2500</span></div>
     <div>
         <button id="play-btn" class="nav-btn" style="background:#2ecc71; color:white" onclick="toggleGame()">BAŞLAT</button>
-        <button class="nav-btn" style="background:#e74c3c; color:white" onclick="location.reload()">Sıfırla</button>
+        <button class="nav-btn" style="background:#e74c3c; color:white" onclick="location.reload()">SIFIRLA</button>
     </div>
     <div class="stat">⚔️ W: <span id="wave-val">1</span></div>
 </div>
 
 <div id="timer-box"><span id="time-val">00:00</span></div>
 
-<button id="market-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">🛒</button>
+<!-- MOBİL MARKET BUTONU -->
+<button id="market-toggle" onclick="toggleSidebar()">🛒</button>
 
 <div id="game-container">
     <div id="sidebar"><div id="cards-container"></div></div>
@@ -98,6 +99,10 @@
     let gold = 1200, wave = 1, wallHp = 2500, isRunning = false;
     let players = [], enemies = [], arrows = [], archers = [];
     let selectedUnit = null, gameTime = 0, spawnTimer;
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+    }
 
     // SÜRE SAYACI
     setInterval(() => { if(isRunning) { gameTime++; updateTimer(); } }, 1000);
@@ -129,7 +134,7 @@
         cardsContainer.appendChild(card);
     }
 
-    // 25 OKÇU OLUŞTURMA
+    // 25 OKÇU
     function createArchers() {
         const arenaHeight = window.innerHeight - 60;
         for(let i=0; i<25; i++) {
@@ -146,7 +151,7 @@
 
     function buyUnits(count, cost, hp, e) {
         e.stopPropagation();
-        if(gold < cost * count) return;
+        if(gold < cost * count) return alert("Altın Yetersiz!");
         gold -= cost * count;
         for(let i=0; i<count; i++) {
             let p = { hp: hp, x: Math.random()*100, y: 60 + Math.random()*(window.innerHeight-120), speed: 2, el: null };
@@ -154,6 +159,7 @@
             players.push(p);
         }
         updateUI();
+        if(window.innerWidth <= 768) toggleSidebar(); // Mobilde satın alınca kapat
     }
 
     function createUnitEl(u, cls, ico) {
@@ -174,7 +180,7 @@
         if(!isRunning) return;
         let e = { 
             x: window.innerWidth + 20, y: Math.random()*window.innerHeight, 
-            speed: 1.2 + (wave*0.05), hp: 30 + (wave*25), el: null 
+            speed: 1.2 + (wave*0.06), hp: 30 + (wave*28), el: null 
         };
         e.el = createUnitEl(e, 'e-unit', '💀');
         enemies.push(e);
@@ -184,13 +190,11 @@
     function loop() {
         if(!isRunning) return;
 
-        // OKÇULAR (25 ADET)
         archers.forEach(a => {
             let target = enemies.find(e => e.x > (window.innerWidth*0.5));
             if(target && Date.now() - a.lastShot > 1100) { fireArrow(a, target); a.lastShot = Date.now(); }
         });
 
-        // OK HAREKETİ
         arrows.forEach((arr, idx) => {
             arr.x += arr.vx; arr.y += arr.vy;
             arr.el.style.left = arr.x + "px"; arr.el.style.top = arr.y + "px";
@@ -200,10 +204,9 @@
             if(arr.x > window.innerWidth || arr.x < 0) { if(arr.el.parentNode) arr.el.remove(); arrows.splice(idx, 1); }
         });
 
-        // DÜŞMAN VE OYUNCU SAVAŞ MANTIĞI
         enemies.forEach(e => {
             if(wallHp > 0) {
-                if(e.x > (window.innerWidth*0.48)) e.x -= e.speed; else wallHp -= 0.8;
+                if(e.x > (window.innerWidth*0.48)) e.x -= e.speed; else wallHp -= 1.0;
             } else {
                 let t = findNearest(e, players);
                 if(t) moveTowards(e, t, false); else e.x -= e.speed;
@@ -236,7 +239,7 @@
             let card = document.getElementById(`card-${i}`);
             if(wave >= i) { 
                 card.classList.remove('locked'); 
-                let info = card.querySelector('.lock-info'); if(info) info.innerText = "KİLİT AÇIK ✅";
+                let info = card.querySelector('.lock-info'); if(info) info.innerText = "AÇIK ✅";
             }
         }
     }
@@ -245,7 +248,7 @@
         let el = document.createElement('div'); el.className = 'arrow';
         document.getElementById('arena').appendChild(el);
         let dx = t.x - a.x, dy = t.y - a.y, dist = Math.hypot(dx, dy);
-        arrows.push({ el, x: a.x, y: a.y, vx: (dx/dist)*11, vy: (dy/dist)*11 });
+        arrows.push({ el, x: a.x, y: a.y, vx: (dx/dist)*12, vy: (dy/dist)*12 });
     }
 
     function findNearest(me, list) {
@@ -257,7 +260,7 @@
     function moveTowards(me, t, isP) {
         let dx = t.x - me.x, dy = t.y - me.y, dist = Math.hypot(dx, dy);
         if(dist > 25) { me.x += (dx/dist)*me.speed; me.y += (dy/dist)*me.speed; }
-        else t.hp -= isP ? 2 : 0.4;
+        else t.hp -= isP ? 2 : 0.5;
     }
 
     function updateUI() {
