@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Kuşatma Ustası: Stratejik Gelişim</title>
+    <style>
+        :root { --p-color: #00d2ff; --e-color: #ff416c; --gold: #ffd700; }
+        body { margin: 0; background: #0a0a12; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        
+        /* ÜST PANEL - BAŞLAT/DURDUR BURADA */
+        #ui-layer { 
+            position: absolute; top: 0; width: 100%; height: 70px;
+            display: flex; justify-content: space-around; align-items: center; 
+            background: rgba(0,0,0,0.9); z-index: 1000; border-bottom: 2px solid #444; 
+        }
+        .stat { text-align: center; font-weight: bold; }
+        .nav-btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 0 5px; }
+
+        #timer-box { position: absolute; top: 80px; right: 20px; font-size: 18px; color: var(--gold); z-index: 1100; }
+
+        #game-container { display: flex; height: 100vh; padding-top: 70px; }
+        
+        /* ASKER MARKETİ - BUTONLAR KARTLARIN İÇİNDE */
+        #sidebar { width: 320px; background: #1a1a2e; padding: 15px; border-right: 2px solid #333; overflow-y: auto; }
+        .card { background: #16213e; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 2px solid transparent; transition: 0.3s; }
+        .card.locked { opacity: 0.3; cursor: not-allowed; }
+        .card.selected { border-color: var(--p-color); background: #1f4068; }
+        
+        .buy-group { display: none; margin-top: 10px; gap: 5px; justify-content: center; }
+        .card.selected .buy-group { display: flex; }
+        .buy-group button { background: var(--gold); border: none; padding: 5px 8px; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: bold; }
+
+        /* SAVAŞ ALANI */
+        #arena { flex: 1; position: relative; background: #141e30; overflow: hidden; }
+        #wall { position: absolute; left: 480px; top: 0; width: 40px; height: 100%; background: #34495e; border-left: 8px solid #2c3e50; border-right: 8px solid #2c3e50; z-index: 100; box-shadow: 0 0 20px black; }
+
+        /* BİRİMLER */
+        .unit { position: absolute; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 50; }
+        .p-unit { background: var(--p-color); box-shadow: 0 0 8px var(--p-color); }
+        .e-unit { background: var(--e-color); box-shadow: 0 0 8px var(--e-color); }
+        .archer-unit { background: #9b59b6; border: 2px solid #fff; z-index: 110; width: 26px; height: 26px; }
+        .arrow { position: absolute; width: 10px; height: 2px; background: yellow; z-index: 40; }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <div class="stat">💰 ALTIN: <span id="gold-val">1000</span></div>
+    <div class="stat">🏰 SUR HP: <span id="w-hp-txt">2500</span></div>
+    <div>
+        <button id="play-btn" class="nav-btn" style="background:#2ecc71" onclick="toggleGame()">BAŞLAT</button>
+        <button class="nav-btn" style="background:#e74c3c; color:white" onclick="location.reload()">SIFIRLA</button>
+    </div>
+    <div class="stat">⚔️ WAVE: <span id="wave-val">1</span></div>
+</div>
+
+<div id="timer-box">SÜRE: <span id="time-val">00:00</span></div>
+
+<div id="game-container">
+    <div id="sidebar"><div id="cards-container"></div></div>
+    <div id="arena">
+        <div id="wall"></div>
+    </div>
+</div>
+
+<script>
+    let gold = 1000, wave = 1, wallHp = 2500, wallMax = 2500, isRunning = false;
+    let players = [], enemies = [], arrows = [], archers = [];
+    let selectedUnit = null, gameTime = 0;
+
+    // SÜRE SAYACI
+    setInterval(() => { if(isRunning) { gameTime++; updateTimer(); } }, 1000);
+    function updateTimer() {
+        let mins = Math.floor(gameTime/60).toString().padStart(2,'0');
+        let secs = (gameTime%60).toString().padStart(2,'0');
+        document.getElementById('time-val').innerText = `${mins}:${secs}`;
+    }
+
+    // MARKET VE BUTONLARIN KARTA EKLENMESİ
+    const cardsContainer = document.getElementById('cards-container');
+    for(let i=1; i<=50; i++) {
+        let pwr = 30 + (i*5); let cost = 10 + (i*2); let unlock = i;
+        let config = { id: i, hp: pwr, cost: cost, unlock: unlock };
+        
+        let card = document.createElement('div');
+        card.id = `card-${i}`; card.className = 'card locked';
+        card.innerHTML = `
+            <b>Seviye ${i} Savaşçı</b><br><small>Güç: ${pwr} | Maliyet: ${cost}G</small>
+            <div class="buy-group">
+                <button onclick="buyUnits(10, ${cost}, ${pwr}, event)">10x</button>
+                <button onclick="buyUnits(20, ${cost}, ${pwr}, event)">20x</button>
+                <button onclick="buyUnits(50, ${cost}, ${pwr}, event)">50x</button>
+            </div>
+            <span class="lock-info" style="font-size:10px; color:red">Wave ${unlock} Bekleniyor</span>
+        `;
+        card.onclick = () => { if(wave >= unlock) selectCard(card, config); };
+        cardsContainer.appendChild(card);
+    }
+
+    function selectCard(el, config) {
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected'); selectedUnit = config;
+    }
+
+    // OKÇULARI OLUŞTUR
+    function createArchers() {
+        archers = [];
+        for(let i=0; i<10; i++) {
+            let y = 50 + (i * 60);
+            let a = { x: 485, y: y, lastShot: 0 };
+            let div = document.createElement('div');
+            div.className = 'unit archer-unit'; div.innerText = '🏹';
+            div.style.left = "485px"; div.style.top = y + "px";
+            document.getElementById('arena').appendChild(div);
+            archers.push(a);
+        }
+    }
+    createArchers();
+
+    function buyUnits(count, cost, hp, e) {
+        e.stopPropagation();
+        if(gold < cost * count) return alert("Yetersiz Altın!");
+        gold -= cost * count;
+        for(let i=0; i<count; i++) {
+            let p = { hp: hp, x: 50 + Math.random()*350, y: 50 + Math.random()*500, speed: 2, el: null };
+            p.el = createUnitEl(p, 'p-unit', '⚔️');
+            players.push(p);
+        }
+        document.getElementById('gold-val').innerText = gold;
+    }
+
+    function createUnitEl(u, cls, ico) {
+        let div = document.createElement('div');
+        div.className = 'unit ' + cls; div.innerText = ico;
+        div.style.left = u.x + "px"; div.style.top = u.y + "px";
+        document.getElementById('arena').appendChild(div); return div;
+    }
+
+    function toggleGame() { 
+        isRunning = !isRunning; 
+        document.getElementById('play-btn').innerText = isRunning ? "DURDUR" : "DEVAM ET";
+        if(isRunning) { loop(); spawnEnemy(); }
+    }
+
+    function spawnEnemy() {
+        if(!isRunning) return;
+        let e = { x: window.innerWidth, y: Math.random()*window.innerHeight, speed: 1.2 + (wave*0.1), hp: 20 + (wave*20), el: null };
+        e.el = createUnitEl(e, 'e-unit', '💀');
+        enemies.push(e);
+        setTimeout(spawnEnemy, Math.max(600, 2000 - (wave*150)));
+    }
+
+    function loop() {
+        if(!isRunning) return;
+
+        // OKÇU ATIŞLARI
+        archers.forEach(a => {
+            let target = enemies.find(e => e.x > 520 && e.x < window.innerWidth);
+            if(target && Date.now() - a.lastShot > 1200) { fireArrow(a, target); a.lastShot = Date.now(); }
+        });
+
+        // OK HAREKETİ
+        arrows.forEach((arr, idx) => {
+            arr.x += arr.vx; arr.y += arr.vy;
+            arr.el.style.left = arr.x + "px"; arr.el.style.top = arr.y + "px";
+            enemies.forEach(e => {
+                if(Math.hypot(arr.x - e.x, arr.y - e.y) < 20) { e.hp -= 15; arr.el.remove(); arrows.splice(idx, 1); }
+            });
+            if(arr.x > window.innerWidth || arr.x < 0) { if(arr.el.parentNode) arr.el.remove(); arrows.splice(idx, 1); }
+        });
+
+        // DÜŞMAN VE OYUNCU MANTIĞI
+        enemies.forEach(e => {
+            if(wallHp > 0) {
+                if(e.x > 530) e.x -= e.speed; else wallHp -= 0.8;
+            } else {
+                let t = findNearest(e, players);
+                if(t) moveTowards(e, t, false); else e.x -= e.speed;
+            }
+            e.el.style.left = e.x + "px"; e.el.style.top = e.y + "px";
+        });
+
+        players.forEach(p => {
+            let t = findNearest(p, enemies);
+            if(t) {
+                // SUR YIKILANA KADAR BEKLE
+                if(wallHp > 0 && t.x > 520) { if(p.x < 440) p.x += p.speed; }
+                else moveTowards(p, t, true);
+            }
+            p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px";
+        });
+
+        enemies = enemies.filter(e => e.hp > 0 || (gold += 15, e.el.remove(), false));
+        players = players.filter(p => p.hp > 0 || (p.el.remove(), false));
+
+        if(wallHp <= 0) { document.getElementById('wall').style.opacity = "0.1"; wallHp = 0; }
+        
+        if(Math.random() < 0.001) { wave++; checkUnlocks(); }
+        
+        document.getElementById('w-hp-txt').innerText = Math.floor(wallHp);
+        document.getElementById('wave-val').innerText = wave;
+        document.getElementById('gold-val').innerText = gold;
+        
+        requestAnimationFrame(loop);
+    }
+
+    function checkUnlocks() {
+        for(let i=1; i<=50; i++) {
+            let card = document.getElementById(`card-${i}`);
+            if(wave >= i) { 
+                card.classList.remove('locked'); 
+                let info = card.querySelector('.lock-info'); if(info) info.innerText = "AÇIK";
+            }
+        }
+    }
+
+    function fireArrow(a, t) {
+        let el = document.createElement('div'); el.className = 'arrow';
+        document.getElementById('arena').appendChild(el);
+        let dx = t.x - a.x, dy = t.y - a.y, dist = Math.hypot(dx, dy);
+        arrows.push({ el, x: a.x, y: a.y, vx: (dx/dist)*10, vy: (dy/dist)*10 });
+    }
+
+    function findNearest(me, list) {
+        let n = null, d = Infinity;
+        list.forEach(t => { let dist = Math.hypot(me.x - t.x, me.y - t.y); if(dist < d) { d = dist; n = t; } });
+        return n;
+    }
+
+    function moveTowards(me, t, isP) {
+        let dx = t.x - me.x, dy = t.y - me.y, dist = Math.hypot(dx, dy);
+        if(dist > 25) { me.x += (dx/dist)*me.speed; me.y += (dy/dist)*me.speed; }
+        else t.hp -= isP ? 2 : 0.5;
+    }
+
+    checkUnlocks();
+</script>
+</body>
+</html>
