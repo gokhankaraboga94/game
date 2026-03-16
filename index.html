@@ -17,7 +17,7 @@
         .nav-btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
 
         #timer-box { 
-            position: absolute; top: 70px; right: 15px; 
+            position: absolute; top: 70px; right: 80px; /* Düşman kalesinin arkasında kalmaması için sola çektik */
             display: flex; flex-direction: column; align-items: flex-end; gap: 5px; z-index: 900; 
         }
         .speed-btn { 
@@ -27,7 +27,19 @@
 
         #game-container { display: flex; height: 100vh; padding-top: 60px; box-sizing: border-box; }
         #arena { flex: 1; position: relative; background: #141e30; overflow: hidden; background-image: radial-gradient(#243b55 1px, transparent 1px); background-size: 40px 40px; }
+        
+        /* Bizim Surlar */
         #wall { position: absolute; left: 45%; top: 0; width: 35px; height: 100%; background: #34495e; border-left: 6px solid #2c3e50; border-right: 6px solid #2c3e50; z-index: 100; box-shadow: 0 0 25px black; transition: 0.5s; }
+
+        /* Düşman Üretim Kalesi (Zarar Görmez, HP'siz) */
+        #enemy-castle { 
+            position: absolute; right: 0; top: 0; width: 60px; height: 100%; 
+            background: #1a0505; border-left: 5px solid var(--e-color); z-index: 90; 
+            display: flex; flex-direction: column; align-items: center; justify-content: space-evenly;
+            box-shadow: 0 0 40px rgba(255, 65, 108, 0.5);
+        }
+        .portal-icon { font-size: 30px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 1; text-shadow: 0 0 10px var(--e-color); } 100% { transform: scale(1); opacity: 0.8; } }
 
         #sidebar { 
             width: 320px; background: #1a1a2e; padding: 15px; border-right: 2px solid #333; 
@@ -60,7 +72,6 @@
         .e-unit { background: var(--e-color); box-shadow: 0 0 8px var(--e-color); }
         .archer-unit { background: #9b59b6; border: 1px solid #fff; z-index: 110; width: 22px; height: 22px; font-size: 12px; }
         
-        /* Kahraman Stili */
         .h-unit { background: #ffd700; box-shadow: 0 0 15px #ffd700, 0 0 30px #ff8c00; width: 34px; height: 34px; font-size: 20px; z-index: 120; border: 2px solid white; }
 
         .arrow { position: absolute; width: 10px; height: 2px; background: yellow; z-index: 40; border-radius: 2px; }
@@ -74,8 +85,7 @@
 
 <div id="ui-layer">
     <div class="stat">💰 <span id="gold-val">1200</span></div>
-    <div class="stat">🏰 <span id="w-hp-txt">2500</span></div>
-    <div>
+    <div class="stat">🏰 <span id="w-hp-txt">7500</span></div> <div>
         <button id="play-btn" class="nav-btn" style="background:#2ecc71; color:white" onclick="toggleGame()">BAŞLAT</button>
         <button class="nav-btn" style="background:#e74c3c; color:white" onclick="location.reload()">SIFIRLA</button>
     </div>
@@ -95,6 +105,12 @@
         <div id="wall"></div>
         <div id="blue-flag">🎌</div>
         <div id="countdown-txt">10</div>
+        
+        <div id="enemy-castle">
+            <div class="portal-icon">🌀</div>
+            <div class="portal-icon">👹</div>
+            <div class="portal-icon">🌀</div>
+        </div>
     </div>
 </div>
 
@@ -104,20 +120,18 @@
 </div>
 
 <script>
-    let gold = 1200, wave = 1, wallHp = 2500, isRunning = false, isGameOver = false;
+    // Sur HP 2500'den 7500'e yükseltildi
+    let gold = 1200, wave = 1, wallHp = 7500, isRunning = false, isGameOver = false;
     let players = [], enemies = [], arrows = [], archers = [];
     let selectedUnit = null, gameTime = 0, gameSpeed = 1, spawnTimer;
 
-    // Kahraman Değişkenleri
     let heroCount = 0;
     const maxHeroes = 10;
 
-    // Bayrak ve Geri Sayım Değişkenleri
     let flagActive = false;
     let flagTimerFrames = 0;
     let flagCountdown = 10;
     
-    // Bayrak Pozisyonunu Ayarla
     let flagPos = { x: window.innerWidth * 0.15, y: window.innerHeight * 0.5 };
     let flagEl = document.getElementById('blue-flag');
     flagEl.style.left = flagPos.x + "px";
@@ -141,7 +155,6 @@
 
     const cardsContainer = document.getElementById('cards-container');
 
-    // --- Muhteşem Kahraman Kartı (En Üste) ---
     let heroCard = document.createElement('div');
     heroCard.className = 'card';
     heroCard.style.borderColor = '#ffd700';
@@ -152,7 +165,6 @@
         </div>`;
     cardsContainer.appendChild(heroCard);
 
-    // --- Standart Asker Kartları ---
     for(let i=1; i<=50; i++) {
         let pwr = 40 + (i*6); let cost = 15 + (i*3);
         let card = document.createElement('div');
@@ -174,7 +186,7 @@
 
     function buyHero(e) {
         e.stopPropagation();
-        if (heroCount >= maxHeroes) return; // Sınırı kontrol et
+        if (heroCount >= maxHeroes) return;
         
         heroCount++;
         document.getElementById('hero-count-txt').innerText = heroCount;
@@ -184,7 +196,7 @@
             x: Math.random() * (window.innerWidth * 0.35), 
             y: 60 + Math.random()*(window.innerHeight-120), 
             speed: 3, 
-            damage: 50, // Kahraman inanılmaz yüksek vurur
+            damage: 50,
             el: null 
         };
         p.el = createUnitEl(p, 'h-unit', '🦸‍♂️');
@@ -212,7 +224,6 @@
         if(gold < cost * count) return;
         gold -= cost * count;
         for(let i=0; i<count; i++) {
-            // Standart Asker hasarı: 2
             let p = { hp: hp, x: Math.random() * (window.innerWidth * 0.35), y: 60 + Math.random()*(window.innerHeight-120), speed: 2, damage: 2, el: null };
             p.el = createUnitEl(p, 'p-unit', '⚔️');
             players.push(p);
@@ -247,7 +258,8 @@
         if(!isRunning || isGameOver) return;
         let count = 1 + Math.floor(wave / 4);
         for(let i=0; i<count; i++){
-            let e = { x: window.innerWidth + 50, y: 60 + Math.random()*(window.innerHeight-120), speed: 1.2 + (wave*0.06), hp: 60 + (wave*40), el: null };
+            // Düşmanlar artık ekran dışından değil, kaleden (ekranın sağından 70px içeriden) doğuyor
+            let e = { x: window.innerWidth - 70, y: 60 + Math.random()*(window.innerHeight-120), speed: 1.2 + (wave*0.06), hp: 60 + (wave*40), el: null };
             e.el = createUnitEl(e, 'e-unit', '💀');
             enemies.push(e);
         }
@@ -301,7 +313,9 @@
                     if(t) moveTowards(p, t, true);
                 }
                 
-                let maxX = window.innerWidth - 30;
+                // Oyuncuların Ekrandan Çıkmasını Tamamen Engelleme
+                // Askerler artık düşman kalesinin içerisine veya ekran dışına giremez
+                let maxX = window.innerWidth - 80; 
                 let maxY = window.innerHeight - 30;
                 p.x = Math.max(10, Math.min(p.x, maxX));
                 p.y = Math.max(70, Math.min(p.y, maxY));
@@ -374,7 +388,6 @@
             me.x += (dx/dist)*me.speed; 
             me.y += (dy/dist)*me.speed; 
         } else {
-            // Askerse (veya kahramansa) kendi hasarını vurur, düşmansa 1.5 vurur
             t.hp -= isP ? me.damage : 1.5; 
         }
     }
