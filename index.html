@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sonsuz Kuşatma: Mobil Pro V2</title>
+    <title>Kuşatma Ustası: Strateji Pro</title>
     <style>
         :root { --p-color: #00d2ff; --e-color: #ff416c; --gold: #ffd700; }
         body { margin: 0; background: #0a0a12; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: manipulation; }
@@ -17,7 +17,15 @@
         .stat { text-align: center; font-weight: bold; font-size: 14px; }
         .nav-btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
 
-        #timer-box { position: absolute; top: 70px; right: 15px; font-size: 16px; color: var(--gold); z-index: 900; font-weight: bold; }
+        /* HIZ VE SÜRE PANELİ */
+        #timer-box { 
+            position: absolute; top: 70px; right: 15px; 
+            display: flex; flex-direction: column; align-items: flex-end; gap: 5px; z-index: 900; 
+        }
+        .speed-btn { 
+            background: #34495e; color: white; border: 1px solid #7f8c8d; 
+            padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; 
+        }
 
         /* ANA KONTEYNER */
         #game-container { display: flex; height: 100vh; padding-top: 60px; box-sizing: border-box; }
@@ -32,24 +40,20 @@
             overflow-y: auto; box-sizing: border-box; z-index: 1500; transition: transform 0.3s ease;
         }
 
-        /* MARKET BUTONU (MOBİL İÇİN) */
+        /* MOBİL AYARLAR */
         #market-toggle {
             position: fixed; bottom: 20px; left: 20px; z-index: 3000;
             background: var(--gold); color: black; border: 2px solid white; border-radius: 50%;
-            width: 60px; height: 60px; font-size: 28px; cursor: pointer;
-            display: none; box-shadow: 0 0 20px rgba(255,215,0,0.5);
-            align-items: center; justify-content: center;
+            width: 60px; height: 60px; font-size: 28px; cursor: pointer; display: none; align-items: center; justify-content: center;
         }
 
-        /* MOBİL AYARLAR */
         @media (max-width: 768px) {
             #sidebar {
-                position: fixed; bottom: 0; left: 0; width: 100%; height: 50vh;
-                border-right: none; border-top: 4px solid #444;
-                transform: translateY(100%);
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 45vh;
+                border-right: none; border-top: 3px solid #444; transform: translateY(100%);
             }
             #sidebar.open { transform: translateY(0); }
-            #market-toggle { display: flex; } /* Sadece mobilde göster */
+            #market-toggle { display: flex; }
             #wall { left: 40%; }
         }
 
@@ -60,15 +64,14 @@
         
         .buy-group { display: none; margin-top: 10px; gap: 8px; }
         .card.selected .buy-group { display: flex; }
-        .buy-group button { background: var(--gold); border: none; padding: 10px; border-radius: 5px; flex: 1; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .buy-group button { background: var(--gold); border: none; padding: 8px; border-radius: 5px; flex: 1; font-weight: bold; cursor: pointer; font-size: 12px; }
 
         /* BİRİMLER */
         .unit { position: absolute; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 50; }
         .p-unit { background: var(--p-color); box-shadow: 0 0 8px var(--p-color); }
         .e-unit { background: var(--e-color); box-shadow: 0 0 8px var(--e-color); }
         .archer-unit { background: #9b59b6; border: 1px solid #fff; z-index: 110; width: 22px; height: 22px; font-size: 12px; }
-        .arrow { position: absolute; width: 12px; height: 3px; background: yellow; z-index: 40; border-radius: 2px; }
-        .lock-info { font-size: 10px; color: #ff416c; font-weight: bold; display: block; margin-top: 4px; }
+        .arrow { position: absolute; width: 10px; height: 2px; background: yellow; z-index: 40; border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -83,26 +86,31 @@
     <div class="stat">⚔️ W: <span id="wave-val">1</span></div>
 </div>
 
-<div id="timer-box"><span id="time-val">00:00</span></div>
+<div id="timer-box">
+    <button class="speed-btn" onclick="changeSpeed()">HIZ: <span id="speed-txt">1x</span></button>
+    <span id="time-val" style="font-weight: bold; color: var(--gold);">00:00</span>
+</div>
 
-<!-- MOBİL MARKET BUTONU -->
 <button id="market-toggle" onclick="toggleSidebar()">🛒</button>
 
 <div id="game-container">
     <div id="sidebar"><div id="cards-container"></div></div>
-    <div id="arena">
-        <div id="wall"></div>
-    </div>
+    <div id="arena"><div id="wall"></div></div>
 </div>
 
 <script>
     let gold = 1200, wave = 1, wallHp = 2500, isRunning = false;
     let players = [], enemies = [], arrows = [], archers = [];
-    let selectedUnit = null, gameTime = 0, spawnTimer;
+    let selectedUnit = null, gameTime = 0, gameSpeed = 1, spawnTimer;
 
-    function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('open');
+    function changeSpeed() {
+        if(gameSpeed === 1) gameSpeed = 2;
+        else if(gameSpeed === 2) gameSpeed = 4;
+        else gameSpeed = 1;
+        document.getElementById('speed-txt').innerText = gameSpeed + "x";
     }
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
     // SÜRE SAYACI
     setInterval(() => { if(isRunning) { gameTime++; updateTimer(); } }, 1000);
@@ -118,15 +126,13 @@
         let pwr = 40 + (i*6); let cost = 15 + (i*3);
         let card = document.createElement('div');
         card.id = `card-${i}`; card.className = 'card locked';
-        card.innerHTML = `
-            <b>Seviye ${i} Savaşçı</b><br><small>Güç: ${pwr} | ${cost}G</small>
+        card.innerHTML = `<b>Seviye ${i}</b><br><small>Güç: ${pwr} | ${cost}G</small>
             <div class="buy-group">
                 <button onclick="buyUnits(10, ${cost}, ${pwr}, event)">10x</button>
                 <button onclick="buyUnits(20, ${cost}, ${pwr}, event)">20x</button>
                 <button onclick="buyUnits(50, ${cost}, ${pwr}, event)">50x</button>
             </div>
-            <span class="lock-info">Wave ${i} Kilidi</span>
-        `;
+            <span style="font-size:10px; color:#ff416c">Wave ${i} Kilidi</span>`;
         card.onclick = () => { if(wave >= i) { 
             document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected'); selectedUnit = {id:i, hp:pwr, cost:cost};
@@ -134,12 +140,12 @@
         cardsContainer.appendChild(card);
     }
 
-    // 25 OKÇU
+    // 25 OKÇU OLUŞTURMA
     function createArchers() {
         const arenaHeight = window.innerHeight - 60;
         for(let i=0; i<25; i++) {
             let y = (i + 1) * (arenaHeight / 26);
-            let a = { x: window.innerWidth * 0.45, y: y, lastShot: Date.now() + Math.random()*1000 };
+            let a = { x: window.innerWidth * 0.45, y: y, lastShot: 0 };
             let div = document.createElement('div');
             div.className = 'unit archer-unit'; div.innerText = '🏹';
             div.style.left = "45%"; div.style.top = y + "px";
@@ -151,15 +157,15 @@
 
     function buyUnits(count, cost, hp, e) {
         e.stopPropagation();
-        if(gold < cost * count) return alert("Altın Yetersiz!");
+        if(gold < cost * count) return alert("Yetersiz Altın!");
         gold -= cost * count;
         for(let i=0; i<count; i++) {
-            let p = { hp: hp, x: Math.random()*100, y: 60 + Math.random()*(window.innerHeight-120), speed: 2, el: null };
+            let p = { hp: hp, x: Math.random()*150, y: 60 + Math.random()*(window.innerHeight-120), speed: 2, el: null };
             p.el = createUnitEl(p, 'p-unit', '⚔️');
             players.push(p);
         }
-        updateUI();
-        if(window.innerWidth <= 768) toggleSidebar(); // Mobilde satın alınca kapat
+        document.getElementById('gold-val').innerText = Math.floor(gold);
+        if(window.innerWidth <= 768) toggleSidebar();
     }
 
     function createUnitEl(u, cls, ico) {
@@ -178,69 +184,79 @@
 
     function spawnEnemy() {
         if(!isRunning) return;
-        let e = { 
-            x: window.innerWidth + 20, y: Math.random()*window.innerHeight, 
-            speed: 1.2 + (wave*0.06), hp: 30 + (wave*28), el: null 
-        };
-        e.el = createUnitEl(e, 'e-unit', '💀');
-        enemies.push(e);
-        spawnTimer = setTimeout(spawnEnemy, Math.max(600, 2000 - (wave*150)));
+        // Düşman Sayısı Artırıldı
+        let count = 1 + Math.floor(wave / 4);
+        for(let i=0; i<count; i++){
+            let e = { 
+                x: window.innerWidth + 50, y: Math.random()*window.innerHeight, 
+                speed: 1.2 + (wave*0.06), hp: 30 + (wave*30), el: null 
+            };
+            e.el = createUnitEl(e, 'e-unit', '💀');
+            enemies.push(e);
+        }
+        spawnTimer = setTimeout(spawnEnemy, Math.max(500, 2000 - (wave*100)) / gameSpeed);
     }
 
     function loop() {
         if(!isRunning) return;
 
-        archers.forEach(a => {
-            let target = enemies.find(e => e.x > (window.innerWidth*0.5));
-            if(target && Date.now() - a.lastShot > 1100) { fireArrow(a, target); a.lastShot = Date.now(); }
-        });
-
-        arrows.forEach((arr, idx) => {
-            arr.x += arr.vx; arr.y += arr.vy;
-            arr.el.style.left = arr.x + "px"; arr.el.style.top = arr.y + "px";
-            enemies.forEach(e => {
-                if(Math.hypot(arr.x - e.x, arr.y - e.y) < 20) { e.hp -= 15; arr.el.remove(); arrows.splice(idx, 1); }
+        for(let s=0; s < gameSpeed; s++) {
+            // OKÇU MENZİLİ KISALTILDI (Sadece sur önündekilere atar)
+            archers.forEach(a => {
+                let target = enemies.find(e => e.x > (window.innerWidth*0.46) && e.x < (window.innerWidth*0.65));
+                if(target && Date.now() - a.lastShot > 1100) { fireArrow(a, target); a.lastShot = Date.now(); }
             });
-            if(arr.x > window.innerWidth || arr.x < 0) { if(arr.el.parentNode) arr.el.remove(); arrows.splice(idx, 1); }
-        });
 
-        enemies.forEach(e => {
-            if(wallHp > 0) {
-                if(e.x > (window.innerWidth*0.48)) e.x -= e.speed; else wallHp -= 1.0;
-            } else {
-                let t = findNearest(e, players);
-                if(t) moveTowards(e, t, false); else e.x -= e.speed;
-            }
-            e.el.style.left = e.x + "px"; e.el.style.top = e.y + "px";
-        });
+            arrows.forEach((arr, idx) => {
+                arr.x += arr.vx; arr.y += arr.vy;
+                enemies.forEach(e => {
+                    if(Math.hypot(arr.x - e.x, arr.y - e.y) < 20) { e.hp -= 15; arr.el.remove(); arrows.splice(idx, 1); }
+                });
+                if(arr.x > window.innerWidth || arr.x < 0) { if(arr.el.parentNode) arr.el.remove(); arrows.splice(idx, 1); }
+            });
 
-        players.forEach(p => {
-            let t = findNearest(p, enemies);
-            if(t) {
-                if(wallHp > 0 && t.x > (window.innerWidth*0.48)) { 
-                    if(p.x < (window.innerWidth*0.4)) p.x += p.speed; 
-                } else moveTowards(p, t, true);
-            }
-            p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px";
-        });
+            enemies.forEach(e => {
+                if(wallHp > 0) {
+                    if(e.x > (window.innerWidth*0.48)) e.x -= e.speed; else wallHp -= 0.8;
+                } else {
+                    let t = findNearest(e, players);
+                    if(t) moveTowards(e, t, false); else e.x -= e.speed;
+                }
+            });
 
-        enemies = enemies.filter(e => e.hp > 0 || (gold += (10+wave), e.el.remove(), false));
-        players = players.filter(p => p.hp > 0 || (p.el.remove(), false));
+            players.forEach(p => {
+                let t = findNearest(p, enemies);
+                if(t) {
+                    // SUR YIKILANA KADAR POZİSYON KORU
+                    if(wallHp > 0) { 
+                        if(p.x < (window.innerWidth*0.4)) p.x += p.speed * 0.5; 
+                    } else moveTowards(p, t, true);
+                }
+            });
+
+            enemies = enemies.filter(e => e.hp > 0 || (gold += (10+wave), e.el.remove(), false));
+            players = players.filter(p => p.hp > 0 || (p.el.remove(), false));
+        }
+
+        // Görsel Güncelleme
+        arrows.forEach(arr => { arr.el.style.left = arr.x + "px"; arr.el.style.top = arr.y + "px"; });
+        enemies.forEach(e => { e.el.style.left = e.x + "px"; e.el.style.top = e.y + "px"; });
+        players.forEach(p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; });
 
         if(wallHp <= 0) { document.getElementById('wall').style.opacity = "0.1"; wallHp = 0; }
         if(Math.random() < 0.001) { wave++; checkUnlocks(); }
         
-        updateUI();
-        if(players.length > 0 || wallHp > 0 || enemies.length > 0) requestAnimationFrame(loop);
+        document.getElementById('gold-val').innerText = Math.floor(gold);
+        document.getElementById('wave-val').innerText = wave;
+        document.getElementById('w-hp-txt').innerText = Math.max(0, Math.floor(wallHp));
+
+        requestAnimationFrame(loop);
     }
 
     function checkUnlocks() {
         for(let i=1; i<=50; i++) {
             let card = document.getElementById(`card-${i}`);
-            if(wave >= i) { 
-                card.classList.remove('locked'); 
-                let info = card.querySelector('.lock-info'); if(info) info.innerText = "AÇIK ✅";
-            }
+            if(wave >= i) card.classList.remove('locked');
         }
     }
 
@@ -261,12 +277,6 @@
         let dx = t.x - me.x, dy = t.y - me.y, dist = Math.hypot(dx, dy);
         if(dist > 25) { me.x += (dx/dist)*me.speed; me.y += (dy/dist)*me.speed; }
         else t.hp -= isP ? 2 : 0.5;
-    }
-
-    function updateUI() {
-        document.getElementById('gold-val').innerText = Math.floor(gold);
-        document.getElementById('wave-val').innerText = wave;
-        document.getElementById('w-hp-txt').innerText = Math.max(0, Math.floor(wallHp));
     }
     checkUnlocks();
 </script>
