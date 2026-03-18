@@ -83,7 +83,8 @@
 
 <div id="ui-layer">
     <div class="stat">💰 <span id="gold-val">1200</span></div>
-    <div class="stat">🏰 <span id="w-hp-txt">15000</span></div> <div>
+    <div class="stat">🏰 <span id="w-hp-txt">15000</span></div> 
+    <div class="stat">💂 <span id="soldier-count-txt">0</span></div> <div>
         <button id="play-btn" class="nav-btn" style="background:#2ecc71; color:white" onclick="toggleGame()">BAŞLAT</button>
         <button class="nav-btn" style="background:#e74c3c; color:white" onclick="location.reload()">SIFIRLA</button>
     </div>
@@ -118,12 +119,11 @@
 </div>
 
 <script>
-    let gold = 1200, wave = 1, wallHp = 15000, isRunning = false, isGameOver = false; // Sur HP 15000 yapıldı
+    let gold = 1200, wave = 1, wallHp = 15000, isRunning = false, isGameOver = false; 
     let players = [], enemies = [], arrows = [], archers = [];
     let selectedUnit = null, gameTime = 0, gameSpeed = 1, spawnTimer;
 
-    let heroCount = 0;
-    const maxHeroes = 500; // Kahraman sınırı 500 oldu
+    let heroCount = 0; // Sınır kaldırıldı
 
     let flagActive = false;
     let flagTimerFrames = 0;
@@ -137,6 +137,7 @@
     function changeSpeed() {
         if(gameSpeed === 1) gameSpeed = 2;
         else if(gameSpeed === 2) gameSpeed = 4;
+        else if(gameSpeed === 4) gameSpeed = 8; // 8x Hız eklendi
         else gameSpeed = 1;
         document.getElementById('speed-txt').innerText = gameSpeed + "x";
     }
@@ -152,7 +153,7 @@
 
     const cardsContainer = document.getElementById('cards-container');
 
-    // Yeni Çoklu Butonlu Kahraman Kartı
+    // Sınırsız Çoklu Butonlu Kahraman Kartı
     let heroCard = document.createElement('div');
     heroCard.className = 'card';
     heroCard.style.borderColor = '#ffd700';
@@ -163,7 +164,7 @@
             <button onclick="buyHero(10, event)" style="background:var(--gold); color:black; border:none; padding:6px; border-radius:5px; flex:1; font-weight:bold; cursor:pointer; font-size:11px;">10x</button>
             <button onclick="buyHero(35, event)" style="background:var(--gold); color:black; border:none; padding:6px; border-radius:5px; flex:1; font-weight:bold; cursor:pointer; font-size:11px;">35x</button>
         </div>
-        <div style="text-align:center; font-size:11px; margin-top:6px; color:#ddd;">Üretilen: <span id="hero-count-txt">0</span> / 500</div>`;
+        <div style="text-align:center; font-size:11px; margin-top:6px; color:#ddd;">Üretilen: <span id="hero-count-txt">0</span> / Sınırsız</div>`;
     cardsContainer.appendChild(heroCard);
 
     for(let i=1; i<=50; i++) {
@@ -185,16 +186,11 @@
         cardsContainer.appendChild(card);
     }
 
-    // Kahraman satın alma fonksiyonu çoklu üretim için güncellendi
+    // Kahraman sınırı kaldırıldı
     function buyHero(amount, e) {
         e.stopPropagation();
         
-        // Eğer 500'ü geçecekse, sadece kalan limiti üret
-        if (heroCount + amount > maxHeroes) {
-            amount = maxHeroes - heroCount;
-        }
-        
-        if (amount <= 0) return; // Limit doluysa hiçbir şey yapma
+        if (amount <= 0) return; 
         
         heroCount += amount;
         document.getElementById('hero-count-txt').innerText = heroCount;
@@ -212,6 +208,7 @@
             players.push(p);
         }
         
+        updateUI(); // Yeni askeri hemen sayaca yansıt
         if(window.innerWidth <= 768) toggleSidebar();
     }
 
@@ -268,7 +265,6 @@
         if(!isRunning || isGameOver) return;
         let count = 1 + Math.floor(wave / 4);
         for(let i=0; i<count; i++){
-            // Düşmanlar erken aşamalarda çok daha güçlü ve hızlı (HP: 200'den başlıyor)
             let e = { x: window.innerWidth - 70, y: 60 + Math.random()*(window.innerHeight-120), speed: 1.5 + (wave*0.08), hp: 200 + (wave*50), el: null };
             e.el = createUnitEl(e, 'e-unit', '💀');
             enemies.push(e);
@@ -403,6 +399,7 @@
         document.getElementById('gold-val').innerText = Math.floor(gold);
         document.getElementById('wave-val').innerText = wave;
         document.getElementById('w-hp-txt').innerText = Math.max(0, Math.floor(wallHp));
+        document.getElementById('soldier-count-txt').innerText = players.length; // Canlı Asker Sayısı Güncellemesi
     }
     checkUnlocks();
 </script>
