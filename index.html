@@ -123,7 +123,7 @@
     let players = [], enemies = [], arrows = [], archers = [];
     let selectedUnit = null, gameTime = 0, gameSpeed = 1, spawnTimer;
 
-    let heroCount = 0; // Sınır kaldırıldı
+    let heroCount = 0;
 
     let flagActive = false;
     let flagTimerFrames = 0;
@@ -137,7 +137,7 @@
     function changeSpeed() {
         if(gameSpeed === 1) gameSpeed = 2;
         else if(gameSpeed === 2) gameSpeed = 4;
-        else if(gameSpeed === 4) gameSpeed = 8; // 8x Hız eklendi
+        else if(gameSpeed === 4) gameSpeed = 8;
         else gameSpeed = 1;
         document.getElementById('speed-txt').innerText = gameSpeed + "x";
     }
@@ -153,7 +153,6 @@
 
     const cardsContainer = document.getElementById('cards-container');
 
-    // Sınırsız Çoklu Butonlu Kahraman Kartı
     let heroCard = document.createElement('div');
     heroCard.className = 'card';
     heroCard.style.borderColor = '#ffd700';
@@ -186,7 +185,6 @@
         cardsContainer.appendChild(card);
     }
 
-    // Kahraman sınırı kaldırıldı
     function buyHero(amount, e) {
         e.stopPropagation();
         
@@ -196,11 +194,12 @@
         document.getElementById('hero-count-txt').innerText = heroCount;
         
         for(let i=0; i<amount; i++) {
+            // Hız eklendi: speed 3
             let p = { 
                 hp: 9999, 
                 x: Math.random() * (window.innerWidth * 0.35), 
                 y: 60 + Math.random()*(window.innerHeight-120), 
-                speed: 0, 
+                speed: 3, 
                 damage: 50,
                 el: null 
             };
@@ -208,7 +207,7 @@
             players.push(p);
         }
         
-        updateUI(); // Yeni askeri hemen sayaca yansıt
+        updateUI(); 
         if(window.innerWidth <= 768) toggleSidebar();
     }
 
@@ -231,7 +230,8 @@
         if(gold < cost * count) return;
         gold -= cost * count;
         for(let i=0; i<count; i++) {
-            let p = { hp: hp, x: Math.random() * (window.innerWidth * 0.35), y: 60 + Math.random()*(window.innerHeight-120), speed: 0, damage: 2, el: null }; 
+            // Hız eklendi: speed 1.5
+            let p = { hp: hp, x: Math.random() * (window.innerWidth * 0.35), y: 60 + Math.random()*(window.innerHeight-120), speed: 1.5, damage: 2, el: null }; 
             p.el = createUnitEl(p, 'p-unit', '⚔️');
             players.push(p);
         }
@@ -313,11 +313,10 @@
                 }
             });
 
+            // Askerler artık duvarın yıkılmasını beklemiyor, doğrudan düşmana yürüyor
             players.forEach(p => {
-                if(wallHp <= 0) {
-                    let t = findNearest(p, enemies);
-                    if(t) moveTowards(p, t, true); 
-                }
+                let t = findNearest(p, enemies);
+                if(t) moveTowards(p, t, true); 
             });
 
             if(enemyAtFlag) {
@@ -386,10 +385,9 @@
         let attackRange = 35; 
 
         if(dist > attackRange) { 
-            if (!isPlayer) {
-                me.x += (dx/dist)*me.speed; 
-                me.y += (dy/dist)*me.speed; 
-            }
+            // Hem düşman hem de oyuncu yürüyebilsin diye kısıtlama kaldırıldı
+            me.x += (dx/dist)*me.speed; 
+            me.y += (dy/dist)*me.speed; 
         } else {
             t.hp -= isPlayer ? me.damage : 1.5; 
         }
@@ -399,7 +397,7 @@
         document.getElementById('gold-val').innerText = Math.floor(gold);
         document.getElementById('wave-val').innerText = wave;
         document.getElementById('w-hp-txt').innerText = Math.max(0, Math.floor(wallHp));
-        document.getElementById('soldier-count-txt').innerText = players.length; // Canlı Asker Sayısı Güncellemesi
+        document.getElementById('soldier-count-txt').innerText = players.length; 
     }
     checkUnlocks();
 </script>
